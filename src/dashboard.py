@@ -37,10 +37,14 @@ def update_rpm_lights(rpm, rpm_idle, rpm_max, is_engine_on):
 
     if is_engine_on:
         for i in range(LED_COUNT):
-            current_column = i // 8 # ile ma byc aktualnie zaswieconych kolumn
-            color_index = math.floor(current_column * len(rpm_colors) / led_y)
-            
-            if current_column <= column_active:
+            col = i // 8 
+            row = i % 8
+            if col % 2 == 1: # diody polaczone w "wezyk"
+                row = 7 - row
+
+            color_index = min(math.floor(col * len(rpm_colors) / led_y), 2) # podzial rpm na 3 czesci, wybor indexu do koloru
+
+            if col <= column_active: #and row == 0:
                 strip.setPixelColor(i, rpm_colors[color_index])
             else:
                 strip.setPixelColor(i, Color(0, 0, 0))
@@ -50,3 +54,4 @@ def clear_panel_led():
     for i in range(LED_COUNT):
         strip.setPixelColor(i, Color(0, 0, 0))
     strip.show()
+

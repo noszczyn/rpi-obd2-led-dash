@@ -27,8 +27,6 @@ class VirtualCarInterface:
         
     def update(self):
         if self.engine_on:
-            if self.throttle_level > 1:
-                self.throttle_level = 1.05
 
             if self.throttle_level > 0.1: 
                 self.throttle_level -= 0.02
