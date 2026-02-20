@@ -54,4 +54,3 @@ def clear_panel_led():
     for i in range(LED_COUNT):
         strip.setPixelColor(i, Color(0, 0, 0))
     strip.show()
-
