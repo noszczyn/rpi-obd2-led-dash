@@ -9,7 +9,7 @@ LED_PIN = 18 # GPIO
 LED_FREQ_HZ = 800000
 LED_DMA = 10 # kanał dma
 LED_INVERT = False # odwrocenie sygnału
-LED_BRIGHTNESS = 20 # jasnosc (0-255)
+LED_BRIGHTNESS = 100 # jasnosc (0-255)
 LED_CHANNEL = 0 # kanał PWM
 
 strip = PixelStrip(
@@ -58,17 +58,26 @@ def clear_panel_led():
         strip.setPixelColor(i, Color(0, 0, 0))
 
 def update_rpm_lights(rpm, rpm_start, rpm_max):
-    led_factor = max((rpm - rpm_start) / (rpm_max - rpm_start), 0) # wspolczynnik (zakres 0-1)
+    led_factor = min(max((rpm - rpm_start) / (rpm_max - rpm_start), 0), 1) # wspolczynnik (zakres 0-1)
     column_active = int(led_factor * LED_Y) # zakres 0-32 kolumny
 
-    for i in range(column_active):
-        rpm_i = RPM_INDEX[i]
-        #color_index = min(math.floor(col * len(rpm_colors) / led_y), 2) # podzial rpm na 3 czesci, wybor indexu do koloru
-        strip.setPixelColor(rpm_i, colors["red"])
+    for i in range(column_active // 2):
+        rpm_i_start = RPM_INDEX[i]
+        rpm_i_end = RPM_INDEX[-1 - i]
+        
+       if i < 6:
+            color = colors["blue"]
+        elif i < 12:
+            color = colors["yellow"]
+        else:
+            color = colors["red"]    
+
+        strip.setPixelColor(rpm_i_start, color)
+        strip.setPixelColor(rpm_i_end, color)
 
 def update_gear_lights(gear):
     for i in GEARS_INDEX[gear]:
-        strip.setPixelColor(i, colors["yellow"])
+        strip.setPixelColor(i, colors["red"])
 
 def predict_current_gear(rpm, speed):
     neutral_speed_limiter = 5 # aby uniknac dzielenia przez 0, dodaje ogranicznik kiedy ma byc neutral
@@ -83,10 +92,10 @@ def predict_current_gear(rpm, speed):
 
         for gear, gear_ratio in gears_ratios.items():
             devation = abs(current_ratio - gear_ratio)
-            gear_tolerance =  gear_ratio * 0.15 # maksymalne dozwolone odchylenie 
+            gear_tolerance =  gear_ratio * 0.2 # maksymalne dozwolone odchylenie 
 
             if devation < gear_tolerance and devation < ratio_delta:
                 ratio_delta = devation
                 predicted_gear = gear
 
-    update_gear_lights(predicted_gear)
+    return predicted_gear

@@ -31,46 +31,26 @@ strip.begin()
 
 rpm_colors = (Color(0, 255, 0), Color(255, 0, 0), Color(0, 0, 255)) # zielony, czerowny, niebieski
 
-BLINK_INTERVAL = 0.06
-
-last_blink_time = time.monotonic()
-is_blink_on = False
 
 def update_rpm_lights(rpm, rpm_idle, rpm_max, is_engine_on):
-    global last_blink_time, is_blink_on
-
     led_factor = max((rpm - rpm_idle) / (rpm_max - rpm_idle), 0) # wspolczynnik (zakres 0-1)
-    led_active = int(min(led_factor, 1) * LED_COUNT) # ilosc aktywnych diod(sa to indeksy)
     column_active = int(led_factor * led_y) # zakres 0-32 kolumny
 
     if is_engine_on:
-
-        current_time = time.monotonic()
-
-        if rpm > 7000:
-            if current_time - last_blink_time >= BLINK_INTERVAL:
-                is_blink_on = not is_blink_on
-                last_blink_time = current_time
-
         for i in range(LED_COUNT):
             col = i // 8 
             row = i % 8
             if col % 2 == 1: # diody polaczone w "wezyk"
                 row = 7 - row
 
-            color_index = min(math.floor(col * len(rpm_colors) / led_y), 2) # podzial rpm na 3 czesci, wybor indexu do koloru
+            #color_index = min(math.floor(col * len(rpm_colors) / led_y), 2) # podzial rpm na 3 czesci, wybor indexu do koloru
 
-            if col <= column_active and row == 0:
-                if rpm > 7000:
-                    if is_blink_on:
-                        strip.setPixelColor(i, Color(255, 0, 0))
-                    else:
-                        strip.setPixelColor(i, Color(0, 0, 0))
-                else:
-                    strip.setPixelColor(i, rpm_colors[color_index])
+            if col <= column_active: #and row == 0:
+                strip.setPixelColor(i, Color(255, 0, 0))
             else:
                 strip.setPixelColor(i, Color(0, 0, 0))
         strip.show()
+
 
 def clear_panel_led():
     for i in range(LED_COUNT):
