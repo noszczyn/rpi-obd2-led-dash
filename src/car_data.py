@@ -1,10 +1,10 @@
 gears_ratios = {
     0: 0,
-    1: 150,
-    2: 120,
-    3: 90,
-    4: 60,
-    5: 30,
+    1: 133,
+    2: 73,
+    3: 49,
+    4: 37,
+    5: 29,
 }
 
 # Parametry suzuki swift (odcina paliw0 przy 6500rpm)

@@ -24,6 +24,13 @@ strip = PixelStrip(
 # inicjalizacja
 strip.begin()
 
+colors = {
+    "red": Color(255, 0, 0),
+    "green": Color(0, 255, 0),
+    "blue": Color(0, 0, 255),
+    "yellow": Color(255, 255, 0)
+}
+
 # Indeksy gotowych biegow do wyswietlenia
 GEARS_INDEX = {
     -1: [116, 123, 132, 139, 148],
@@ -54,29 +61,29 @@ def update_rpm_lights(rpm, rpm_start, rpm_max):
     led_factor = max((rpm - rpm_start) / (rpm_max - rpm_start), 0) # wspolczynnik (zakres 0-1)
     column_active = int(led_factor * LED_Y) # zakres 0-32 kolumny
 
-    for i in range(column_active)
+    for i in range(column_active):
         rpm_i = RPM_INDEX[i]
         #color_index = min(math.floor(col * len(rpm_colors) / led_y), 2) # podzial rpm na 3 czesci, wybor indexu do koloru
-        strip.setPixelColor(rpm_i, Color(255, 0, 0))
+        strip.setPixelColor(rpm_i, colors["red"])
 
 def update_gear_lights(gear):
     for i in GEARS_INDEX[gear]:
-        strip.setPixelColor(i, Color(255, 0, 0))
+        strip.setPixelColor(i, colors["yellow"])
 
 def predict_current_gear(rpm, speed):
     neutral_speed_limiter = 5 # aby uniknac dzielenia przez 0, dodaje ogranicznik kiedy ma byc neutral
-    gear_tolerance = 15 # maksymalne dozwolone odchylenie 
 
     if speed < neutral_speed_limiter:
         predicted_gear = 0
     else:
         current_ratio = rpm / speed
         ratio_delta = float("inf")
-
+        
         predicted_gear = -1
 
         for gear, gear_ratio in gears_ratios.items():
             devation = abs(current_ratio - gear_ratio)
+            gear_tolerance =  gear_ratio * 0.15 # maksymalne dozwolone odchylenie 
 
             if devation < gear_tolerance and devation < ratio_delta:
                 ratio_delta = devation

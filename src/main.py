@@ -16,4 +16,4 @@ while True:
         if not current_speed.is_null():
             predict_current_gear(rpm=current_rpm.value.magnitude, speed=current_speed.value.magnitude)
         strip.show()
-    sleep.time(0.1)
+    time.sleep(0.1)
