@@ -7,6 +7,6 @@ gears_ratios = {
     5: 29,
 }
 
-# Parametry suzuki swift (odcina paliw0 przy 6500rpm)
-RPM_MAX = 6500
-RPM_START = 1300  # od ilu rpm ma pokazywac ledy
+# Parametry suzuki swift (odcina paliwo przy 6500rpm)
+RPM_MAX = 6000
+RPM_START = 4000  # od ilu rpm ma pokazywac ledy

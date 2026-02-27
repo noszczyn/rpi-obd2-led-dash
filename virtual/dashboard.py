@@ -8,7 +8,7 @@ except ImportError:
     from mocks import PixelStrip, Color
 
 # Konfiguracja panelu led
-led_x, led_y = 8, 32
+led_x, led_y = 8, 8
 LED_COUNT = led_x * led_y # liczba dio
 LED_PIN = 18 # GPIO
 LED_FREQ_HZ = 800000
