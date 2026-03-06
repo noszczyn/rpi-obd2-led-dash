@@ -209,3 +209,4 @@ __marimo__/
 # --- my additions ---
 .venv/
 .vscode/
+.DS_Store
