@@ -47,7 +47,6 @@ Digital-Dashboard/
 ├── tools/
 │   ├── main_perf.py        # Performance and hardware monitor
 │   └── run_perf.sh         # Startup script for the monitor
-├── requirements.txt
 ├── LICENSE
 └── README.md
 ```
