@@ -1,65 +1,72 @@
-import obd
 import time
-from dashboard import update_rpm_lights, predict_current_gear, strip, clear_panel_led, update_gear_lights, update_throttle_position
-from car_data import RPM_MAX, RPM_START
-from startup_check import led_system_check, error_system
+import threading
+import led_strip
+import obd_reader
+import config
+from collections import deque, Counter
+from display import clear_panel_led, update_rpm_lights, update_gear_lights
+from gear_predictor import predict_gear
+from startup_check import run_startup_animation, show_error_lights
+from obd_reader import state, state_lock
 
-connection = obd.Async() # auto connect to usb
-connection.watch(obd.commands.RPM)
-connection.watch(obd.commands.SPEED)
-connection.watch(obd.commands.THROTTLE_POS)
-get_rpm = obd.commands.RPM
-get_speed = obd.commands.SPEED
-get_throttle = obd.commands.THROTTLE_POS
 
-connection.start()
+# ------------------------------------------------------------------
+# LED THREAD
+# ------------------------------------------------------------------
+gear_history = deque(maxlen=5)
+gear_display = 0
+running      = True
+
+def led_loop() -> None:
+    global gear_display
+
+    while running:
+        with state_lock:
+            rpm   = state["rpm"]
+            speed = state["speed"]
+
+        gear = predict_gear(rpm, speed)
+        gear_history.append(gear)
+
+        if len(gear_history) == gear_history.maxlen:
+            gear_display = Counter(gear_history).most_common(1)[0][0]
+
+        clear_panel_led()
+        update_rpm_lights(rpm, config.RPM_START, config.RPM_MAX)
+
+        if gear_display >= 0:
+            update_gear_lights(gear_display)
+
+        led_strip.show()
+        time.sleep(0.03)
+
+
+# ------------------------------------------------------------------
+# START
+# ------------------------------------------------------------------
+led_thread = None
 
 try:
-    gear_history = []
-    gear_display = 0
-    last_rpm = 0
+    obd_reader.connection.start()
 
-    if connection.is_connected():
-        led_system_check()
+    if obd_reader.connection.is_connected():
+        run_startup_animation()
         clear_panel_led()
-        strip.show()
+        led_strip.show()
 
-        while True:
-            current_rpm_obj = connection.query(get_rpm)
-            current_speed_obj = connection.query(get_speed)
-            current_throttle_obj = connection.query(get_throttle)
+        led_thread = threading.Thread(target=led_loop, daemon=True)
+        led_thread.start()
 
-            if not current_rpm_obj.is_null():
-                current_rpm = current_rpm_obj.value.magnitude
-                current_speed = current_speed_obj.value.magnitude if not current_speed_obj.is_null() else 0
-                current_throttle = current_throttle_obj.value.magnitude if not current_throttle_obj.is_null() else 0
+        while led_thread.is_alive():
+            time.sleep(0.1)
 
-                if abs(current_rpm - last_rpm) > 10:
-                    gear = predict_current_gear(rpm=current_rpm, speed=current_speed)
-
-                    if len(gear_history) > 2:
-                        if len(set(gear_history)) == 1:
-                            gear_display = gear_history[0]
-                        gear_history.pop(0)
-
-                    gear_history.append(gear)
-                    last_rpm = current_rpm
-
-                clear_panel_led()
-
-                update_rpm_lights(current_rpm, RPM_START, RPM_MAX)
-
-                if gear_display >= 0:
-                    update_gear_lights(gear_display)
-
-                update_throttle_position(current_throttle)
-
-                strip.show()
-            time.sleep(0.03)
     else:
-        error_system()
-        
+        show_error_lights()
+
 except KeyboardInterrupt:
-    connection.stop()
+    running = False
+    if led_thread is not None:
+        led_thread.join()
+    obd_reader.connection.stop()
     clear_panel_led()
-    strip.show()
+    led_strip.show()
