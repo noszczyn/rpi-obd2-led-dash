@@ -1,4 +1,4 @@
-# 🏎️ Digital Dashboard
+# 🏎️ OBD2 LED Telemetry: RPM Shift Light & Smart Gear Indicator
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?logo=Raspberry-Pi)
