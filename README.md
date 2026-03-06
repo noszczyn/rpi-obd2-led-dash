@@ -43,6 +43,7 @@ Digital-Dashboard/
 │   ├── startup_check.py    # Boot animation and error display
 │   ├── main.py             # Main application loop
 │   └── run.sh              # Production startup script
+│   └── requirements.txt    # Necessary libraries
 ├── tools/
 │   ├── main_perf.py        # Performance and hardware monitor
 │   └── run_perf.sh         # Startup script for the monitor
