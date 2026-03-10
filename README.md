@@ -99,7 +99,7 @@ The monitor displays live OBD data, gear prediction history, LED frame rate and 
 
 ---
 
-## 🔍 How Gear Prediction Works
+## How Gear Prediction Works
 
 The algorithm divides **RPM by speed (km/h)** to get a ratio, then compares it against known gear ratios for the vehicle with a configurable tolerance (default ±20%). The result is stabilized using a majority vote over the last 5 readings to eliminate outliers.
 
