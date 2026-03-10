@@ -127,6 +127,6 @@ pip install -r requirements.txt
 
 ---
 
-## 📄 License
+## License
 
 MIT — see [LICENSE](LICENSE) for details.
