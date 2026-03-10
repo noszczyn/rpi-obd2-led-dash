@@ -1,4 +1,4 @@
-# 🏎️ OBD2 LED Telemetry: RPM Shift Light & Smart Gear Indicator
+# OBD2 LED Telemetry: RPM Shift Light & Smart Gear Indicator
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?logo=Raspberry-Pi)
@@ -6,11 +6,11 @@
 
 A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and WS2812B LED matrices. Specifically built for the **Suzuki Swift (2008)**, but easily configurable for any OBD2-compatible vehicle.
 
-> 📸 *Photo / GIF of the matrix in action coming soon*
+>  *Photo / GIF of the matrix in action coming soon*
 
 ---
 
-## ✨ Features
+## Features
 
 - **Real-time RPM indicator** — progressive LED bar that lights up from both sides
 - **Smart gear prediction** — calculates the current gear mathematically from RPM/speed ratios, no gear sensor required
@@ -20,7 +20,7 @@ A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and
 
 ---
 
-## 🛠️ Hardware
+## Hardware
 
 | Component | Details |
 |---|---|
@@ -30,7 +30,7 @@ A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 Digital-Dashboard/
@@ -53,7 +53,7 @@ Digital-Dashboard/
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ```bash
 git clone https://github.com/noszczyn/Digital-Dashboard
@@ -65,7 +65,7 @@ pip install -r requirements.txt
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 All parameters are in `src/config.py`. Key settings:
 
@@ -83,7 +83,7 @@ OBD_PROTOCOL = "5"  # ISO 14230-4 KWP FAST
 
 ---
 
-## ▶️ Usage
+## Usage
 
 **Production:**
 ```bash
@@ -112,7 +112,7 @@ current_ratio = RPM / speed
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 ```
 obd
