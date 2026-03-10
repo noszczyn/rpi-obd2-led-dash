@@ -1,4 +1,4 @@
-import os
+import subprocess
 import time
 import threading
 import psutil
@@ -32,6 +32,7 @@ gear_history = deque(maxlen=5)
 gear_display = 0
 running      = True
 frame_times  = deque(maxlen=60)  # rolling average over last 60 frames (~2 seconds)
+TARGET_FRAME_TIME = 0.03
 
 def led_loop() -> None:
     global gear_display
@@ -57,7 +58,8 @@ def led_loop() -> None:
 
         led_strip.show()
 
-        frame_ms = (time.perf_counter() - frame_start) * 1000
+        elapsed = time.perf_counter() - frame_start
+        frame_ms = elapsed * 1000
         frame_times.append(frame_ms)
 
         with metrics_lock:
@@ -67,7 +69,7 @@ def led_loop() -> None:
             metrics["gear_history"]         = list(gear_history)
             metrics["last_gear_display"]    = gear_display
 
-        time.sleep(0.03)
+        time.sleep(max(0.0, TARGET_FRAME_TIME - elapsed))
 
 # ------------------------------------------------------------------
 # OBD CALLBACKS WITH METRICS
@@ -124,7 +126,20 @@ def _get_throttle_state() -> dict | None:
       bit 18 — ever: throttling occurred
     """
     try:
-        result  = os.popen("vcgencmd get_throttled").read().strip()
+        completed = subprocess.run(
+            ["vcgencmd", "get_throttled"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+        )
+        if completed.returncode != 0:
+            return None
+
+        result = completed.stdout.strip()
+        if "=" not in result:
+            return None
+
         hex_val = int(result.split("=")[1], 16)
         return {
             "under_voltage":      bool(hex_val & (1 << 0)),
@@ -135,7 +150,7 @@ def _get_throttle_state() -> dict | None:
             "throttled_ever":     bool(hex_val & (1 << 18)),
             "raw": hex(hex_val),
         }
-    except Exception:
+    except (ValueError, IndexError, OSError, subprocess.SubprocessError):
         return None
 
 def _format_throttle_state(ts: dict | None) -> str:

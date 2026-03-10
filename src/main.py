@@ -16,11 +16,14 @@ from obd_reader import state, state_lock
 gear_history = deque(maxlen=5)
 gear_display = 0
 running      = True
+TARGET_FRAME_TIME = 0.03
 
 def led_loop() -> None:
     global gear_display
 
     while running:
+        frame_start = time.perf_counter()
+
         with state_lock:
             rpm   = state["rpm"]
             speed = state["speed"]
@@ -38,7 +41,8 @@ def led_loop() -> None:
             update_gear_lights(gear_display)
 
         led_strip.show()
-        time.sleep(0.03)
+        elapsed = time.perf_counter() - frame_start
+        time.sleep(max(0.0, TARGET_FRAME_TIME - elapsed))
 
 
 # ------------------------------------------------------------------

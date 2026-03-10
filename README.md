@@ -1,6 +1,6 @@
 # OBD2 LED Telemetry: RPM Shift Light & Smart Gear Indicator
 
-![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?logo=Raspberry-Pi)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -33,7 +33,7 @@ A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and
 ## Project Structure
 
 ```text
-Digital-Dashboard/
+rpi-obd2-led-dash/
 ├── src/
 │   ├── config.py           # All configuration — LED, RPM, gear ratios, OBD params
 │   ├── display.py          # LED rendering logic (RPM bar, gear digits)
@@ -58,7 +58,7 @@ Digital-Dashboard/
 ```bash
 git clone https://github.com/noszczyn/Digital-Dashboard
 cd Digital-Dashboard
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 ```
 
 > **Note:** `rpi_ws281x` requires running as root. The startup scripts handle this automatically via `sudo`.
@@ -122,7 +122,7 @@ psutil
 
 Install via:
 ```bash
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 ```
 
 ---
