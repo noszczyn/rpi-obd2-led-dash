@@ -210,3 +210,31 @@ __marimo__/
 .venv/
 .vscode/
 .DS_Store
+
+# --- C++ Build Artifacts ---
+*.o
+*.so
+*.a
+*.out
+*.bin
+*.elf
+
+# --- Foldery kompilacji (Twoje i bibliotek) ---
+obj/
+build/
+core/rpi_ws281x/build/
+
+# --- Pliki wykonywalne (Twój gotowy program) ---
+dashboard_app
+swift_dash
+
+# --- Cache Scons i CMake ---
+.sconsign.dblite
+CMakeCache.txt
+CMakeFiles/
+Makefile.cmake
+cmake_install.cmake
+
+# --- Python Cache ---
+__pycache__/
+*.pyc

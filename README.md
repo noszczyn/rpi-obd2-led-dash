@@ -1,10 +1,12 @@
 # OBD2 LED Telemetry: RPM Shift Light & Smart Gear Indicator
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+=======
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?logo=Raspberry-Pi)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and WS2812B LED matrices. Specifically built for the **Suzuki Swift (2008)**, but easily configurable for any OBD2-compatible vehicle.
+A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and WS2812B LED matrices. The main implementation is in **C++** (folder `core/`), with an additional Python prototype kept for experiments and profiling.
 
 >  *Photo / GIF of the matrix in action coming soon*
 
@@ -33,6 +35,7 @@ A high-performance, multi-threaded OBD2 telemetry dashboard for Raspberry Pi and
 ## Project Structure
 
 ```text
+<<<<<<< HEAD
 rpi-obd2-led-dash/
 ├── src/
 │   ├── config.py           # All configuration — LED, RPM, gear ratios, OBD params
@@ -47,6 +50,19 @@ rpi-obd2-led-dash/
 ├── tools/
 │   ├── main_perf.py        # Performance and hardware monitor
 │   └── run_perf.sh         # Startup script for the monitor
+=======
+Digital-Dashboard/
+├── core/                       # Main C++ application
+│   ├── include/                # Headers
+│   ├── src/                    # Core implementation
+│   ├── tools/                  # Debug binary entrypoint
+│   ├── rpi_ws281x/             # External ws281x library source
+│   └── Makefile                # Native build
+├── python_prototype/           # Optional add-on (prototype/monitoring)
+│   ├── src/
+│   └── tools/
+├── Makefile                    # Root wrapper for core/Makefile
+>>>>>>> 6ee0430 (swap program from python to c++)
 ├── LICENSE
 └── README.md
 ```
@@ -58,17 +74,26 @@ rpi-obd2-led-dash/
 ```bash
 git clone https://github.com/noszczyn/Digital-Dashboard
 cd Digital-Dashboard
+<<<<<<< HEAD
 pip install -r src/requirements.txt
+=======
+make
+>>>>>>> 6ee0430 (swap program from python to c++)
 ```
 
-> **Note:** `rpi_ws281x` requires running as root. The startup scripts handle this automatically via `sudo`.
+> **Note:** `rpi_ws281x` requires running as root on Raspberry Pi runtime. Build commands themselves do not use `sudo`.
 
 ---
 
+<<<<<<< HEAD
 ## Configuration
+=======
+## ⚙️ Build & Run (C++)
+>>>>>>> 6ee0430 (swap program from python to c++)
 
-All parameters are in `src/config.py`. Key settings:
+Build main binary:
 
+<<<<<<< HEAD
 ```python
 # RPM indicator range
 RPM_START = 3000    # RPM at which the bar starts lighting up
@@ -86,15 +111,18 @@ OBD_PROTOCOL = "5"  # ISO 14230-4 KWP FAST
 ## Usage
 
 **Production:**
+=======
+>>>>>>> 6ee0430 (swap program from python to c++)
 ```bash
-bash src/run.sh
+make
 ```
 
-**Performance monitor (debug):**
+Build debug binary:
 ```bash
-bash tools/run_perf.sh
+make debug
 ```
 
+<<<<<<< HEAD
 The monitor displays live OBD data, gear prediction history, LED frame rate and full Raspberry Pi system health including throttling state.
 
 ---
@@ -103,26 +131,46 @@ The monitor displays live OBD data, gear prediction history, LED frame rate and 
 
 The algorithm divides **RPM by speed (km/h)** to get a ratio, then compares it against known gear ratios for the vehicle with a configurable tolerance (default ±20%). The result is stabilized using a majority vote over the last 5 readings to eliminate outliers.
 
+=======
+Clean binaries:
+```bash
+make clean
+>>>>>>> 6ee0430 (swap program from python to c++)
 ```
-current_ratio = RPM / speed
-→ compare against GEARS_RATIOS
-→ majority vote over last 5 predictions
-→ display on LED matrix
+
+Run from `core/`:
+```bash
+cd core
+./dashboard_app
 ```
 
 ---
 
+<<<<<<< HEAD
 ## Requirements
+=======
+## 🧪 Python Prototype (Optional)
+>>>>>>> 6ee0430 (swap program from python to c++)
 
-```
-obd
-rpi-ws281x
-psutil
-```
+Python code in `python_prototype/` is an optional companion for rapid iteration and performance monitoring.
 
-Install via:
+Install dependencies:
 ```bash
+<<<<<<< HEAD
 pip install -r src/requirements.txt
+=======
+pip install -r python_prototype/src/requirements.txt
+```
+
+Run prototype:
+```bash
+bash python_prototype/src/run.sh
+```
+
+Run monitor:
+```bash
+bash python_prototype/tools/run_perf.sh
+>>>>>>> 6ee0430 (swap program from python to c++)
 ```
 
 ---
