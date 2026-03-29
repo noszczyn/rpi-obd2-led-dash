@@ -50,9 +50,9 @@ bool ObdReader::connect() {
     tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
     tty.c_oflag &= ~OPOST;
 
-    // Wait up to 0.5s for serial data, then return from read().
+    // Short read timeout keeps failed/slow frames from blocking the loop (0.1s units).
     tty.c_cc[VMIN]  = 0;
-    tty.c_cc[VTIME] = 5;
+    tty.c_cc[VTIME] = 2;
 
     if (tcsetattr(m_serial_fd, TCSANOW, &tty) != 0) {
         std::cerr << "Error: tcsetattr failed\n";

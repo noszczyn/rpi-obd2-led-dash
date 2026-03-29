@@ -266,10 +266,15 @@ int main(int argc, char** argv) {
     }
 
     std::thread obd_thread([&obd]() {
+        int speed_poll_phase = 0;
         while (g_running.load()) {
             const auto loop_start = Clock::now();
             const auto rpm = obd.get_rpm();
-            const auto speed = obd.get_speed();
+            std::optional<int> speed;
+            if (++speed_poll_phase >= Config::OBD_SPEED_POLL_INTERVAL) {
+                speed_poll_phase = 0;
+                speed = obd.get_speed();
+            }
             bool got_any_valid_frame = false;
 
             {

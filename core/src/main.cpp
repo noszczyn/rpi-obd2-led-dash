@@ -69,12 +69,20 @@ int main(int argc, char** argv) {
     bool has_last_raw_rpm = false;
     float last_raw_rpm = 0.0f;
     int last_displayed_gear = -1;
+    int speed_poll_phase = 0;
+    std::optional<int> last_speed;
 
     while (g_running) {
         const auto loop_start = clock::now();
 
         auto opt_rpm = obd.get_rpm();
-        auto opt_speed = obd.get_speed();
+        if (++speed_poll_phase >= Config::OBD_SPEED_POLL_INTERVAL) {
+            speed_poll_phase = 0;
+            auto s = obd.get_speed();
+            if (s.has_value()) {
+                last_speed = s;
+            }
+        }
 
         int predicted_gear = -1;
 
@@ -87,7 +95,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        const bool frame_valid = opt_rpm.has_value() && opt_speed.has_value();
+        const bool frame_valid = opt_rpm.has_value() && last_speed.has_value();
 
         if (frame_valid) {
             consecutive_frame_misses = 0;
@@ -98,7 +106,7 @@ int main(int argc, char** argv) {
 
             // Use raw RPM for gear prediction to avoid EMA lag during quick shifts.
             const float rpm_for_gear = *opt_rpm;
-            predicted_gear = predictor.gear_predict(rpm_for_gear, *opt_speed);
+            predicted_gear = predictor.gear_predict(rpm_for_gear, *last_speed);
 
             // Anti-glitch guard:
             // when RPM rises quickly (typical downshift behavior), suppress one-frame
@@ -155,7 +163,9 @@ int main(int argc, char** argv) {
 
         const auto target_loop_time = frame_valid
             ? Config::LOOP_TIME_WITH_VALID_DATA
-            : (opt_rpm.has_value() || opt_speed.has_value() ? Config::LOOP_TIME_PARTIAL_DATA : Config::LOOP_TIME_NO_DATA);
+            : (opt_rpm.has_value() || last_speed.has_value()
+                   ? Config::LOOP_TIME_PARTIAL_DATA
+                   : Config::LOOP_TIME_NO_DATA);
 
         const auto elapsed = clock::now() - loop_start;
         if (elapsed < target_loop_time) {

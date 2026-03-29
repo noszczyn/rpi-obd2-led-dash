@@ -31,6 +31,10 @@ namespace Config {
     inline constexpr auto OBD_STALE_TIMEOUT = std::chrono::seconds(2);
     inline constexpr auto RPM_FRESH_TIMEOUT = std::chrono::milliseconds(200);
 
+    // OBD: read speed only every N main-loop iterations (1 = same as RPM every time).
+    // Speed changes slowly; skipping polls nearly doubles effective RPM refresh rate.
+    constexpr int OBD_SPEED_POLL_INTERVAL = 2;
+
     // GEAR PREDICTOR PARAMETERS
     constexpr int NEUTRAL_SPEED_LIMIT = 3;
     constexpr float GEAR_TOLERANCE = 0.2;
@@ -44,7 +48,7 @@ namespace Config {
     constexpr int LED_PIN = 18; // GPIO pin
     constexpr int LED_FREQ_HZ = 800000; // LED signal frequency (Hz)
     constexpr int LED_DMA = 10; // DMA channel
-    constexpr int LED_BRIGHTNESS = 30; // brightness (0-255)
+    constexpr int LED_BRIGHTNESS = 100; // brightness (0-255)
     constexpr int LED_CHANNEL = 0; // PWM channel
     constexpr bool LED_INVERT = false; // invert signal (for NPN transistor)
 
