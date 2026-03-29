@@ -57,7 +57,7 @@ void Display::update_rpm_lights(float current_rpm){
     for (int i = 0; i < active_pairs; i++) {
         const int rpm_i_start = m_rpm_led_indices[i];
         const int rpm_i_end = m_rpm_led_indices[Config::LED_X - 1 - i];
-        const Color& color = (i < Config::RPM_BASE_PAIRS) ? Config::AMBER : Config::RED;
+        const Color& color = (i < Config::RPM_BASE_PAIRS) ? Config::BLUE : Config::RED;
 
         m_led_strip.set_pixel(rpm_i_start, color.r, color.g, color.b);
         m_led_strip.set_pixel(rpm_i_end, color.r, color.g, color.b);
@@ -73,6 +73,13 @@ void Display::update_gear_lights(int gear) {
     }
 
     for (int led_index : gear_it->second) {
-        m_led_strip.set_pixel(led_index, Config::AMBER.r, Config::AMBER.g, Config::AMBER.b);
+        m_led_strip.set_pixel(led_index, Config::RED.r, Config::RED.g, Config::RED.b);
+    }
+}
+
+void Display::set_top_row_alert(bool enabled) {
+    const Color& color = enabled ? Config::RED : Config::OFF;
+    for (int led_index : m_rpm_led_indices) {
+        m_led_strip.set_pixel(led_index, color.r, color.g, color.b);
     }
 }

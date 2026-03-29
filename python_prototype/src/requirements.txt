@@ -1,3 +1,0 @@
-rpi_ws281x
-obd
-psutil

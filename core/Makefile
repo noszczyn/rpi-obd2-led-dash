@@ -22,9 +22,17 @@ DEBUG_SOURCE = tools/main_debug.cpp
 TARGET = dashboard_app
 DEBUG_TARGET = dashboard_debug
 
-all: $(TARGET)
+all: check-ws2811 $(TARGET)
 
-debug: $(DEBUG_TARGET)
+debug: check-ws2811 $(DEBUG_TARGET)
+
+.PHONY: check-ws2811
+check-ws2811:
+	@if ! $(PKG_CONFIG) --exists libws2811 2>/dev/null && [ ! -f /usr/local/include/ws2811/ws2811.h ]; then \
+		echo "Error: libws2811 headers not found."; \
+		echo "Install libws2811 (pkg-config) or place headers under /usr/local/include/ws2811."; \
+		exit 1; \
+	fi
 
 $(TARGET): $(COMMON_SOURCES) $(MAIN_SOURCE)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)

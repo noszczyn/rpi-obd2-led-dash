@@ -42,18 +42,23 @@ struct Metrics {
 };
 
 std::atomic<bool> g_running{true};
+std::atomic<long long> g_last_obd_data_ms{0};
+std::atomic<long long> g_last_rpm_data_ms{0};
 std::mutex g_state_mutex;
 std::mutex g_metrics_mutex;
 TelemetryState g_state;
 Metrics g_metrics;
-
-constexpr float kRpmEmaAlpha = 0.20f;
-constexpr auto kObdTick = std::chrono::milliseconds(30);
-constexpr auto kLedTargetFrame = std::chrono::milliseconds(30);
+std::string g_mode_label = "obd-pid";
 
 void handle_sigint(int sig) {
     (void)sig;
     g_running.store(false);
+}
+
+long long monotonic_ms_now() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        Clock::now().time_since_epoch()
+    ).count();
 }
 
 std::optional<double> read_double_file(const std::string& path, double scale = 1.0) {
@@ -222,9 +227,27 @@ int most_common_gear(const std::deque<int>& history) {
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     std::signal(SIGINT, handle_sigint);
+    g_last_obd_data_ms.store(monotonic_ms_now(), std::memory_order_relaxed);
+    g_last_rpm_data_ms.store(monotonic_ms_now(), std::memory_order_relaxed);
+
+    std::string device_path = "/dev/ttyUSB0";
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--device" && i + 1 < argc) {
+            device_path = argv[++i];
+        } else if (arg == "--help") {
+            std::cout
+                << "Usage:\n"
+                << "  ./dashboard_debug [--device /dev/ttyUSB0]\n";
+            return 0;
+        }
+    }
+
+    g_mode_label = "obd-pid";
     std::cout << "--- SUZUKI SWIFT DEBUG MONITOR START ---\n";
+    std::cout << "Mode: " << g_mode_label << ", device: " << device_path << "\n";
 
     LedStrip led_strip;
     if (!led_strip.begin()) {
@@ -235,10 +258,10 @@ int main() {
 
     Display display(led_strip);
     GearPredictor predictor;
-    ObdReader obd("/dev/ttyUSB0");
 
+    ObdReader obd(device_path);
     if (!obd.connect() || !obd.initialize()) {
-        std::cerr << "OBD adapter is not available.\n";
+        std::cerr << "Telemetry adapter is not available.\n";
         return 1;
     }
 
@@ -247,17 +270,25 @@ int main() {
             const auto loop_start = Clock::now();
             const auto rpm = obd.get_rpm();
             const auto speed = obd.get_speed();
+            bool got_any_valid_frame = false;
 
             {
                 std::scoped_lock lock(g_state_mutex);
                 if (rpm.has_value()) {
                     g_state.rpm = *rpm;
                     g_state.rpm_valid = true;
+                    got_any_valid_frame = true;
+                    g_last_rpm_data_ms.store(monotonic_ms_now(), std::memory_order_relaxed);
                 }
                 if (speed.has_value()) {
                     g_state.speed = *speed;
                     g_state.speed_valid = true;
+                    got_any_valid_frame = true;
                 }
+            }
+
+            if (got_any_valid_frame) {
+                g_last_obd_data_ms.store(monotonic_ms_now(), std::memory_order_relaxed);
             }
 
             {
@@ -271,8 +302,8 @@ int main() {
             }
 
             const auto elapsed = Clock::now() - loop_start;
-            if (elapsed < kObdTick) {
-                std::this_thread::sleep_for(kObdTick - elapsed);
+            if (elapsed < Config::OBD_TICK) {
+                std::this_thread::sleep_for(Config::OBD_TICK - elapsed);
             }
         }
     });
@@ -282,6 +313,8 @@ int main() {
         std::deque<double> frame_times_ms;
         float smoothed_rpm = 0.0f;
         bool has_smoothed_rpm = false;
+        bool has_last_raw_rpm = false;
+        float last_raw_rpm = 0.0f;
         int gear_display = -1;
 
         while (g_running.load()) {
@@ -298,13 +331,22 @@ int main() {
                     smoothed_rpm = snapshot.rpm;
                     has_smoothed_rpm = true;
                 } else {
-                    smoothed_rpm = (kRpmEmaAlpha * snapshot.rpm) + ((1.0f - kRpmEmaAlpha) * smoothed_rpm);
+                    smoothed_rpm = (Config::RPM_EMA_ALPHA * snapshot.rpm) + ((1.0f - Config::RPM_EMA_ALPHA) * smoothed_rpm);
                 }
             }
 
             int predicted_gear = -1;
-            if (has_smoothed_rpm && snapshot.speed_valid) {
-                predicted_gear = predictor.gear_predict(smoothed_rpm, snapshot.speed);
+            if (snapshot.rpm_valid && snapshot.speed_valid) {
+                // Use raw RPM for gear prediction to avoid EMA lag during quick shifts.
+                predicted_gear = predictor.gear_predict(snapshot.rpm, snapshot.speed);
+
+                if (gear_display > 0 &&
+                    predicted_gear > gear_display &&
+                    has_last_raw_rpm &&
+                    ((snapshot.rpm - last_raw_rpm) > Config::RPM_RISE_DOWNSHIFT_GUARD)) {
+                    predicted_gear = gear_display;
+                }
+
                 gear_history.push_back(predicted_gear);
                 if (gear_history.size() > 5) {
                     gear_history.pop_front();
@@ -313,13 +355,27 @@ int main() {
                     gear_display = most_common_gear(gear_history);
                 }
             }
+            if (snapshot.rpm_valid) {
+                last_raw_rpm = snapshot.rpm;
+                has_last_raw_rpm = true;
+            }
 
             display.clear_panel_led();
+            const long long now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(frame_start.time_since_epoch()).count();
+            const long long last_rpm_ms = g_last_rpm_data_ms.load(std::memory_order_relaxed);
+            const bool rpm_fresh = (now_ms - last_rpm_ms) <= Config::RPM_FRESH_TIMEOUT.count();
+            const bool over_rev_alert = snapshot.rpm_valid &&
+                                        rpm_fresh &&
+                                        (snapshot.rpm > (Config::MAX_RPM + Config::OVER_REV_ALERT_MARGIN_RPM));
+            const bool over_rev_blink_on = ((now_ms / Config::OVER_REV_BLINK_PERIOD.count()) % 2) == 0;
             if (has_smoothed_rpm) {
                 display.update_rpm_lights(smoothed_rpm);
             }
             if (gear_display >= 0) {
                 display.update_gear_lights(gear_display);
+            }
+            if (over_rev_alert) {
+                display.set_top_row_alert(over_rev_blink_on);
             }
             led_strip.show();
 
@@ -342,8 +398,8 @@ int main() {
                 g_metrics.gear_history.assign(gear_history.begin(), gear_history.end());
             }
 
-            if (elapsed < kLedTargetFrame) {
-                std::this_thread::sleep_for(kLedTargetFrame - elapsed);
+            if (elapsed < Config::LED_TARGET_FRAME) {
+                std::this_thread::sleep_for(Config::LED_TARGET_FRAME - elapsed);
             }
         }
     });
@@ -389,16 +445,25 @@ int main() {
             const auto cpu_percent = cpu_sampler.sample();
             const auto memory = get_memory_info();
             const auto disk = get_disk_info();
+            const auto stale_timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Config::OBD_STALE_TIMEOUT).count();
+            const long long now_ms = monotonic_ms_now();
+            const long long last_obd_ms = g_last_obd_data_ms.load(std::memory_order_relaxed);
+            const long long obd_stale_ms = std::max<long long>(0, now_ms - last_obd_ms);
+            const bool obd_stale = obd_stale_ms > stale_timeout_ms;
 
             std::cout << "\033[2J\033[H";
             std::cout << "================================================\n";
             std::cout << "  DIGITAL DASHBOARD - debug monitor\n";
             std::cout << "  Uptime: " << uptime << "s\n";
+            std::cout << "  Mode: " << g_mode_label << "\n";
             std::cout << "================================================\n\n";
 
-            std::cout << "OBD DATA\n";
+            std::cout << "TELEMETRY DATA\n";
             std::cout << "  RPM:   " << std::setw(6) << static_cast<int>(state_snapshot.rpm) << " rpm\n";
             std::cout << "  Speed: " << std::setw(6) << state_snapshot.speed << " km/h\n\n";
+            std::cout << "  Stream: " << (obd_stale ? "STALE" : "OK")
+                      << " (" << to_fixed(static_cast<double>(obd_stale_ms) / 1000.0, 1)
+                      << "s since last valid frame)\n\n";
 
             std::cout << "GEAR PREDICTION\n";
             std::cout << "  History: [";
@@ -410,7 +475,7 @@ int main() {
             std::cout << "  Display: " << metrics_snapshot.last_gear_display << "\n\n";
 
             std::cout << "PERFORMANCE\n";
-            std::cout << "  OBD callbacks/s:  " << to_fixed(callbacks_per_sec, 1) << "\n";
+            std::cout << "  Telemetry callbacks/s: " << to_fixed(callbacks_per_sec, 1) << "\n";
             std::cout << "  LED frames/s:     " << to_fixed(frames_per_sec, 1) << " (target ~33)\n";
             std::cout << "  Frame time:       " << to_fixed(metrics_snapshot.led_frame_time_ms, 2) << " ms\n";
             std::cout << "  Avg frame time:   " << to_fixed(metrics_snapshot.led_frame_time_avg, 2) << " ms\n";
@@ -435,6 +500,9 @@ int main() {
             }
 
             std::cout << "\nPress Ctrl+C to stop\n";
+            if (obd_stale) {
+                std::cout << "\nWARNING: telemetry stream is stale (>2s without valid frame)\n";
+            }
         }
     });
 

@@ -99,7 +99,7 @@ bool ObdReader::initialize() {
     if (!run_at_and_expect_ok("ATL0")) {
         return false;
     }
-    if (!run_at_and_expect_ok("ATSP0")) {
+    if (!run_at_and_expect_ok("ATSP5")) {
         return false;
     }
 

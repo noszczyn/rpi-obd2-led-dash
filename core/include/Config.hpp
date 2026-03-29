@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <chrono>
 
 struct Color {
     uint8_t r;
@@ -12,9 +13,23 @@ struct Color {
 
 namespace Config {
     // RPM PARAMETERS — SUZUKI SWIFT 2008
-    constexpr float MAX_RPM = 5000.0; // RPM at which LED indicator ends
-    constexpr float START_RPM = 3000.0; // RPM at which LED indicator starts
+    constexpr float MAX_RPM = 4500.0; // RPM at which LED indicator ends
+    constexpr float START_RPM = 2000.0; // RPM at which LED indicator starts
     constexpr int RPM_BASE_PAIRS = 3; // LED pairs shown in base color before shift color
+    constexpr float RPM_EMA_ALPHA = 0.20f;
+    constexpr float RPM_RISE_DOWNSHIFT_GUARD = 120.0f;
+    constexpr float OVER_REV_ALERT_MARGIN_RPM = 500.0f;
+
+    // LOOP / TIMING PARAMETERS
+    constexpr int MAX_CONSECUTIVE_FRAME_MISSES = 20;
+    inline constexpr auto OVER_REV_BLINK_PERIOD = std::chrono::milliseconds(160);
+    inline constexpr auto LOOP_TIME_WITH_VALID_DATA = std::chrono::milliseconds(40);
+    inline constexpr auto LOOP_TIME_PARTIAL_DATA = std::chrono::milliseconds(60);
+    inline constexpr auto LOOP_TIME_NO_DATA = std::chrono::milliseconds(100);
+    inline constexpr auto OBD_TICK = std::chrono::milliseconds(30);
+    inline constexpr auto LED_TARGET_FRAME = std::chrono::milliseconds(30);
+    inline constexpr auto OBD_STALE_TIMEOUT = std::chrono::seconds(2);
+    inline constexpr auto RPM_FRESH_TIMEOUT = std::chrono::milliseconds(200);
 
     // GEAR PREDICTOR PARAMETERS
     constexpr int NEUTRAL_SPEED_LIMIT = 3;
@@ -36,6 +51,7 @@ namespace Config {
     // COLORS
     constexpr Color AMBER = {255, 80, 0};
     constexpr Color RED = {255, 40, 0}; 
+    constexpr Color BLUE = {0, 0, 255}; 
     constexpr Color OFF = {0, 0, 0};
 
     // GEAR DISPLAY INDICES — LED MATRIX
