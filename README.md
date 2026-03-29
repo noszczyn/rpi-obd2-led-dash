@@ -1,188 +1,184 @@
-# OBD2 LED Dashboard (Raspberry Pi)
+# OBD2 LED Dashboard (Raspberry Pi, Python)
 
-![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Hardware-C51A4A?logo=Raspberry-Pi)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-Real-time OBD2 dashboard for Raspberry Pi and an 8x8 WS2812B LED matrix.
+WS2812B 8×8 LED matrix dashboard: RPM bar, gear prediction, over-rev blink. Uses **python-OBD** (ELM327) and **rpi_ws281x**.
 
-Primary runtime mode is **automatic startup on boot** (car ignition -> Raspberry Pi power -> dashboard starts automatically).
+---
 
-## What It Does
+## Full setup: autostart from scratch
 
-- Displays RPM on the top LED row (symmetric bar).
-- Predicts current gear from RPM/speed ratio.
-- Shows an over-rev alert: top row blinks red above threshold.
-- Includes an optional debug binary for SSH-based diagnostics.
+Use this if you have a **fresh Raspberry Pi** and want the dashboard to start **automatically on every boot** (e.g. power from the car).  
+Below, the project lives under **`/home/pi/rpi-obd2-led-dash`** — adjust the username if yours is not `pi`.
 
-## Hardware Requirements
+### 1) Raspberry Pi OS
 
-- Raspberry Pi (3/4/Zero 2 W recommended)
-- WS2812B 8x8 LED matrix
-- ELM327 USB OBD2 adapter (typically `/dev/ttyUSB0`)
-- Stable 5V power supply for automotive use
-
-## Fresh Raspberry Pi Setup (Step by Step)
-
-This section is intended for a clean Raspberry Pi OS installation.
-
-### 1) Prepare Raspberry Pi OS
-
-- Flash Raspberry Pi OS Lite (recommended).
-- Boot the Pi and connect it to network.
-- Enable SSH:
+- Install **Raspberry Pi OS Lite** (or Desktop) and boot the Pi.
+- Connect network (Ethernet or Wi‑Fi).
+- **Enable SSH** (optional but recommended for headless setup):
 
 ```bash
 sudo raspi-config
 ```
 
-Then go to `Interface Options` -> `SSH` -> `Enable`.
+→ `Interface Options` → `SSH` → `Enable`.
 
-### 2) Install build dependencies
+Update the system:
 
 ```bash
-sudo apt update
-sudo apt install -y git make g++ pkg-config cmake
+sudo apt update && sudo apt full-upgrade -y
 ```
 
-### 3) Clone this repository
+### 2) Install system packages
+
+```bash
+sudo apt install -y git python3 python3-pip python3-venv
+```
+
+### 3) Clone the repository
 
 ```bash
 cd /home/pi
-git clone https://github.com/noszczyn/Digital-Dashboard.git dash
-cd /home/pi/dash
+git clone https://github.com/noszczyn/Digital-Dashboard.git rpi-obd2-led-dash
+cd /home/pi/rpi-obd2-led-dash
 ```
 
-### 4) Install `libws2811`
+(If you already copied the folder by other means, just ensure the path is `/home/pi/rpi-obd2-led-dash` and contains `src/main.py`.)
 
-The dashboard requires `libws2811` and `ws2811.h`.
+### 4) Install Python dependencies
 
-Use the bundled source:
+Either **system-wide** (simplest for the provided systemd unit):
 
 ```bash
-cd /home/pi/dash/core/rpi_ws281x
-mkdir -p build
-cd build
-cmake ..
-make -j$(nproc)
-sudo make install
-sudo ldconfig
+cd /home/pi/rpi-obd2-led-dash
+python3 -m pip install --break-system-packages -r src/requirements.txt
 ```
 
-Quick check:
+On older images without `--break-system-packages`, use a venv and point the systemd unit to that Python (see notes at the end), or:
 
 ```bash
-pkg-config --cflags --libs libws2811
+python3 -m pip install -r src/requirements.txt
 ```
 
-### 5) Install dashboard autostart service (recommended/default)
+### 5) Quick manual test (optional)
 
-From repository root:
+Plug in the **ELM327 USB** adapter. Then:
 
 ```bash
-cd /home/pi/dash
-sudo bash scripts/install_autostart.sh /dev/ttyUSB0
+cd /home/pi/rpi-obd2-led-dash
+bash src/run.sh
 ```
 
-This script:
-- builds the project,
-- creates `dash-dashboard.service`,
-- enables and starts it automatically on boot.
+You should see the startup animation and live data when the car / adapter responds.  
+Stop with `Ctrl+C`. GPIO needs **root** — `run.sh` uses `sudo`.
 
-### 6) Verify service state
+### 6) Install autostart (systemd)
+
+This installs **`dash-dashboard.service`**, enables it on boot, and starts it now:
+
+```bash
+cd /home/pi/rpi-obd2-led-dash
+sudo bash scripts/install_autostart.sh
+```
+
+### 7) Verify the service
 
 ```bash
 systemctl status dash-dashboard.service --no-pager
 journalctl -u dash-dashboard.service -f
 ```
 
-### 7) Validate boot behavior
+### 8) Confirm after reboot
 
 ```bash
 sudo reboot
 ```
 
-After reboot, dashboard should start without manual commands.
-
-## Daily Usage (Production)
-
-No manual start required after setup.  
-The service starts on boot automatically.
-
-Useful commands:
+After the Pi comes back:
 
 ```bash
-# Service status
 systemctl status dash-dashboard.service --no-pager
+```
 
-# Live logs
-journalctl -u dash-dashboard.service -f
+You should see **`active (running)`** when OBD and LEDs are OK.
 
-# Restart service
-sudo systemctl restart dash-dashboard.service
+### Disable autostart
 
-# Disable autostart
+```bash
 sudo systemctl disable --now dash-dashboard.service
 ```
 
-## Debug Workflow (Optional, via SSH)
+---
 
-Debug mode is secondary and intended for remote troubleshooting.
+## Features
 
-1) SSH into Raspberry Pi from your laptop:
+- Symmetric RPM bar (configurable range and colors)
+- Gear estimate from RPM / speed (no gear sensor)
+- EMA-smoothed RPM for the bar; raw RPM for gear logic
+- Over-rev: top row blinks red above `RPM_MAX + OVER_REV_ALERT_MARGIN_RPM`
+- Optional performance monitor over SSH (`tools/main_perf.py`)
 
-```bash
-ssh pi@<raspberry_pi_ip>
+## Hardware
+
+| Component | Notes |
+|-----------|--------|
+| Raspberry Pi | 3 / 4 / Zero 2 W |
+| LED matrix | WS2812B 8×8 |
+| Adapter | ELM327 USB |
+
+## Project layout
+
+```text
+rpi-obd2-led-dash/
+├── src/
+│   ├── config.py
+│   ├── display.py
+│   ├── main.py
+│   ├── obd_reader.py
+│   ├── led_strip.py
+│   ├── gear_predictor.py
+│   ├── startup_check.py
+│   ├── requirements.txt
+│   └── run.sh
+├── tools/
+│   ├── main_perf.py
+│   └── run_perf.sh
+├── scripts/
+│   └── install_autostart.sh
+└── LICENSE
 ```
 
-2) Build debug binary:
+## Debug over SSH
+
+From your PC:
 
 ```bash
-cd /home/pi/dash
-make debug
+ssh pi@<raspberry-pi-ip>
 ```
 
-3) Run debug monitor:
+On the Pi:
 
 ```bash
-cd /home/pi/dash/core
-sudo ./dashboard_debug --device /dev/ttyUSB0
+cd /home/pi/rpi-obd2-led-dash
+bash tools/run_perf.sh
 ```
 
 ## Configuration
 
-Main tuning values are in:
+Edit **`src/config.py`**: RPM range, colours, over-rev margin/blink, gear ratios, OBD options (`OBD_PROTOCOL`, etc.).
 
-- `core/include/Config.hpp`
+## Gear prediction
 
-Key parameters include:
-- `MAX_RPM`
-- `START_RPM`
-- `OVER_REV_ALERT_MARGIN_RPM`
-- LED timing and loop timing constants
+`RPM / speed` is compared to `GEARS_RATIOS` within `GEAR_TOLERANCE`; the displayed gear uses a majority vote over the last 5 samples.
 
-## Read-Only SD Card (Recommended for Car Use)
+## Requirements (Python packages)
 
-To reduce corruption risk on sudden power loss, follow:
-
-- `docs/raspberry-readonly-guide.md`
-
-## Project Structure
-
-```text
-Digital-Dashboard/
-├── core/
-│   ├── include/
-│   ├── src/
-│   ├── tools/
-│   ├── rpi_ws281x/
-│   └── Makefile
-├── scripts/
-├── docs/
-├── Makefile
-└── README.md
-```
+- `rpi_ws281x`
+- `obd`
+- `psutil` (for `main_perf.py`)
 
 ## License
 
-MIT - see `LICENSE` for details.
+MIT — see `LICENSE`.
