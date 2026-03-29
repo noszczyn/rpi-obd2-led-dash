@@ -81,9 +81,11 @@ def led_loop() -> None:
 # START
 # ------------------------------------------------------------------
 led_thread = None
+_obd_started = False
 
 try:
     obd_reader.connection.start()
+    _obd_started = True
 
     if obd_reader.connection.is_connected():
         run_startup_animation()
@@ -95,13 +97,28 @@ try:
 
         while led_thread.is_alive():
             time.sleep(0.1)
+        if running:
+            raise RuntimeError("led_loop exited unexpectedly")
     else:
+        print(
+            "OBD: no adapter or no link (see journalctl). "
+            "Red pattern = error. Set OBD_PORT in config.py if needed. "
+            "Plug ELM327 USB and: sudo systemctl restart dash-dashboard.service",
+            flush=True,
+        )
         show_error_lights()
+        while True:
+            time.sleep(3600)
 
 except KeyboardInterrupt:
     running = False
+finally:
     if led_thread is not None:
-        led_thread.join()
-    obd_reader.connection.stop()
+        led_thread.join(timeout=3.0)
+    if _obd_started:
+        try:
+            obd_reader.connection.stop()
+        except Exception:
+            pass
     clear_panel_led()
     led_strip.show()

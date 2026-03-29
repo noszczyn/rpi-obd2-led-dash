@@ -33,8 +33,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=${SRC_DIR}
-ExecStart=${PYTHON3} ${SRC_DIR}/main.py
-Restart=on-failure
+ExecStart=${PYTHON3} "${SRC_DIR}/main.py"
+Restart=always
 RestartSec=3
 User=root
 Group=root

@@ -83,6 +83,8 @@ cd /home/pi/rpi-obd2-led-dash
 sudo bash scripts/install_autostart.sh
 ```
 
+**How this matches the code:** the unit runs **`python3 /…/src/main.py`** with **`WorkingDirectory`** set to **`src/`** (same layout as manual `cd src && sudo python3 main.py`). Imports resolve via the script directory. **`User=root`** matches **`src/run.sh`** (GPIO / WS2812 needs root on a typical Pi). Dependencies are installed with the same **`python3`** as **`ExecStart`** (paths are written at install time). **`Restart=always`** brings the service back after crashes; OBD port is only **`src/config.py`** (`OBD_PORT`), not a systemd argument. Re-run the install script after moving the repo to refresh absolute paths in the unit file.
+
 ### 7) Verify the service
 
 ```bash
@@ -167,7 +169,46 @@ bash tools/run_perf.sh
 
 ## Configuration
 
-Edit **`src/config.py`**: RPM range, colours, over-rev margin/blink, gear ratios, OBD options (`OBD_PROTOCOL`, etc.).
+Edit **`src/config.py`**: RPM range, colours, over-rev margin/blink, gear ratios, OBD (`OBD_PORT`, `OBD_PROTOCOL`, etc.).
+
+## RPM bar (top row) — how it lights
+
+Assumes default **`config.py`**: `RPM_START = 2000`, `RPM_MAX = 4500`, `RPM_BASE_PAIRS = 3`, `OVER_REV_ALERT_MARGIN_RPM = 500` (alert when **`rpm > 5000`**). The bar grows **symmetrically** from the outer columns toward the centre; the first three “pair bands” from the outside are **blue**, the innermost active pair is **red** (`rpm_shift`).
+
+**Legend (one character = one LED on the top row, left → right):**
+
+| Symbol | Meaning |
+|--------|---------|
+| `B` | Blue (`rpm_base`) |
+| `R` | Red (`rpm_shift`) |
+| `.` | Off |
+
+**Sweep in 100 RPM steps from 2001** (representative ranges):
+
+| RPM range | Top row pattern |
+|-----------|-----------------|
+| 2001–2601 | `B......B` |
+| 2701–3201 | `BB....BB` |
+| 3301–3801 | `BBB..BBB` |
+| 3901–4901 | `BBBRRBBB` |
+
+**Above 5000 RPM** (`rpm > RPM_MAX + OVER_REV_ALERT_MARGIN_RPM`): the normal bar is **not** shown; the **entire** top row alternates for over-rev warning:
+
+| Phase | Top row |
+|-------|---------|
+| ALERT_ON | `RRRRRRRR` |
+| ALERT_OFF | `........` |
+
+Blink period: `OVER_REV_BLINK_PERIOD_SEC` (default 0.16 s).
+
+**Exact pair count** (from `display.update_rpm_lights`):  
+`active_pairs = ceil(4 × (rpm − RPM_START) / (RPM_MAX − RPM_START))` with four column-pairs on an 8-wide matrix. That gives band edges at **2625**, **3250**, **3875** (between 1↔2, 2↔3, 3↔4 pairs). The table above uses **100 RPM** steps and matches those bands for the listed intervals.
+
+## Troubleshooting
+
+- **Red pattern on the matrix (error glyph)** — OBD did not connect: no ELM327 on USB, wrong device, or ignition off. Check logs: `journalctl -u dash-dashboard.service -b --no-pager` (look for `No OBD-II adapters` or serial errors).
+- **Force a serial port** — set `OBD_PORT = "/dev/ttyUSB0"` or `"/dev/ttyACM0"` in `src/config.py` if auto-detection fails, then `sudo systemctl restart dash-dashboard.service`.
+- **Read-only / overlay root** — if you enabled overlay in `raspi-config`, kernel and initramfs updates need a **writable** `/boot/firmware`. Disable overlay (or remount appropriately) before `apt full-upgrade`; otherwise `dpkg` may leave packages half-configured (`Read-only file system` when copying initramfs).
 
 ## Gear prediction
 

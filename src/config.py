@@ -69,6 +69,9 @@ COLORS = {
 # ------------------------------------------------------------------
 # OBD CONNECTION PARAMETERS (python-OBD Async)
 # ------------------------------------------------------------------
+# None = auto-detect USB serial. If that fails, set e.g. "/dev/ttyUSB0" or "/dev/ttyACM0".
+OBD_PORT = None
+
 OBD_FAST = True
 OBD_TIMEOUT = 0.05
 OBD_CHECK_VOLTAGE = False

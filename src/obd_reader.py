@@ -7,6 +7,8 @@ import config
 state = {"rpm": 0.0, "speed": 0.0}
 state_lock = threading.Lock()
 
+_obd_port = config.OBD_PORT if config.OBD_PORT else None
+
 
 def on_rpm(response):
     if not response.is_null():
@@ -21,6 +23,7 @@ def on_speed(response):
 
 
 connection = obd.Async(
+    _obd_port,
     fast=config.OBD_FAST,
     timeout=config.OBD_TIMEOUT,
     check_voltage=config.OBD_CHECK_VOLTAGE,
