@@ -24,6 +24,10 @@ RPM_EMA_ALPHA = 0.70
 # traktujemy to jako fałszywy "upshift" (w prawdziwym upshifcie RPM zwykle spada).
 RPM_RISE_DOWNSHIFT_GUARD = 120.0
 
+# Guard na fałszywy downshift podczas hamowania: jeśli kandydat na bieg spada (np. 4→3),
+# ale surowe RPM nie rośnie co najmniej o ten próg, to blokujemy zmianę.
+RPM_DOWN_SHIFT_CONFIRM_RISE = 200.0
+
 OVER_REV_ALERT_MARGIN_RPM = 300.0
 OVER_REV_BLINK_PERIOD_SEC = 0.16
 
@@ -43,7 +47,7 @@ GEAR_TOLERANCE = 0.2
 GEAR_FILTER_LEN = 3
 GEAR_HYSTERESIS_K = 2
 # Nowy bieg musi być bliżej idealnego stosunku o ten margines (jednostki jak GEARS_RATIOS).
-GEAR_HYSTERESIS_DEV_MARGIN = 8.0
+GEAR_HYSTERESIS_DEV_MARGIN = 2.0
 GEAR_UNKNOWN_HOLD_SEC = 0.2
 
 GEARS_RATIOS = {
@@ -73,7 +77,7 @@ GEARS_INDEX = {
 # ------------------------------------------------------------------
 COLORS = {
     "gear": Color(109, 40, 217),
-    "rpm_base": Color(74, 222, 128),
+    "rpm_base": Color(0, 200, 30),
     "rpm_shift": Color(109, 40, 217),
     "over_rev": Color(255, 0, 0),
     "black": Color(0, 0, 0),

@@ -132,6 +132,18 @@ class GearPipeline:
         ):
             g = last_displayed_gear
 
+        # Guard na fałszywy downshift przy hamowaniu bez redukcji:
+        # realny downshift zwykle powoduje szybki wzrost RPM (skok w górę),
+        # a podczas hamowania w tym samym biegu RPM raczej spada.
+        if (
+            last_displayed_gear > 0
+            and g > 0
+            and g < last_displayed_gear
+            and has_last_raw_rpm
+            and (raw_rpm - last_raw_rpm) < config.RPM_DOWN_SHIFT_CONFIRM_RISE
+        ):
+            g = last_displayed_gear
+
         self._hist.append(g)
         if len(self._hist) < self._hist.maxlen:
             return -1
