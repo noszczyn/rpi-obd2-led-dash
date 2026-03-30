@@ -32,5 +32,4 @@ connection = obd.Async(
 )
 
 connection.watch(obd.commands.RPM, callback=on_rpm)
-connection.watch(obd.commands.RPM, callback=on_rpm)
 connection.watch(obd.commands.SPEED, callback=on_speed)

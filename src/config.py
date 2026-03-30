@@ -15,24 +15,36 @@ LED_CHANNEL = 0
 # ------------------------------------------------------------------
 # RPM PARAMETERS (ported from C++ Config.hpp)
 # ------------------------------------------------------------------
-RPM_MAX = 4500.0
-RPM_START = 2000.0
+RPM_MAX = 5300.0
+RPM_START = 4000.0
 RPM_BASE_PAIRS = 3
 
-RPM_EMA_ALPHA = 0.20
+RPM_EMA_ALPHA = 0.70
+# Gdy kandydat na bieg jest większy niż stabilny, a surowe RPM rośnie o > tego progu,
+# traktujemy to jako fałszywy "upshift" (w prawdziwym upshifcie RPM zwykle spada).
 RPM_RISE_DOWNSHIFT_GUARD = 120.0
 
-OVER_REV_ALERT_MARGIN_RPM = 500.0
+OVER_REV_ALERT_MARGIN_RPM = 300.0
 OVER_REV_BLINK_PERIOD_SEC = 0.16
 
 # LED / main loop timing
-TARGET_FRAME_TIME_SEC = 0.03
+TARGET_FRAME_TIME_SEC = 0.016
 
 # ------------------------------------------------------------------
 # GEAR PREDICTOR PARAMETERS
 # ------------------------------------------------------------------
-NEUTRAL_SPEED_LIMIT = 3
+# OBD Vehicle Speed is typically km/h (python-OBD); GEARS_RATIOS must match that unit.
+# Histereza luzu: z biegu → 0 przy speed <= ON; z 0 → dopiero gdy speed >= OFF (brak skoków 0↔1).
+NEUTRAL_SPEED_ON = 3.0
+NEUTRAL_SPEED_OFF = 6.0
+MIN_SPEED_FOR_RATIO = 1.0  # poniżej tego predict_gear_raw zwraca -1 (unikaj rpm/speed)
+
 GEAR_TOLERANCE = 0.2
+GEAR_FILTER_LEN = 3
+GEAR_HYSTERESIS_K = 2
+# Nowy bieg musi być bliżej idealnego stosunku o ten margines (jednostki jak GEARS_RATIOS).
+GEAR_HYSTERESIS_DEV_MARGIN = 8.0
+GEAR_UNKNOWN_HOLD_SEC = 0.2
 
 GEARS_RATIOS = {
     0: 0,
@@ -57,12 +69,13 @@ GEARS_INDEX = {
 }
 
 # ------------------------------------------------------------------
-# LED COLORS (RPM: blue base / red shift; gear: red — C++ parity)
+# LED COLORS — gear: purple; RPM: green → purple; over-rev blink: red
 # ------------------------------------------------------------------
 COLORS = {
-    "gear": Color(255, 40, 0),
-    "rpm_base": Color(0, 0, 255),
-    "rpm_shift": Color(255, 40, 0),
+    "gear": Color(109, 40, 217),
+    "rpm_base": Color(74, 222, 128),
+    "rpm_shift": Color(109, 40, 217),
+    "over_rev": Color(255, 0, 0),
     "black": Color(0, 0, 0),
 }
 
@@ -75,5 +88,5 @@ OBD_PORT = None
 OBD_FAST = True
 OBD_TIMEOUT = 0.05
 OBD_CHECK_VOLTAGE = False
-OBD_DELAY_CMDS = 0.05
+OBD_DELAY_CMDS = 0.01
 OBD_PROTOCOL = "5"

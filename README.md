@@ -212,7 +212,15 @@ Blink period: `OVER_REV_BLINK_PERIOD_SEC` (default 0.16 s).
 
 ## Gear prediction
 
-`RPM / speed` is compared to `GEARS_RATIOS` within `GEAR_TOLERANCE`; the displayed gear uses a majority vote over the last 5 samples.
+`RPM / speed` is matched to `GEARS_RATIOS` within `GEAR_TOLERANCE`. The **`GearPipeline`** (in `gear_predictor.py`) applies, in order:
+
+1. **Neutral deadband** — `NEUTRAL_SPEED_ON` / `NEUTRAL_SPEED_OFF` (hysteresis so speed ~3–6 km/h does not flip 0 ↔ gear).
+2. **Upshift guard** (RPM jump) as before.
+3. **Median of the last `GEAR_FILTER_LEN` (3) samples** — dampens a single bad OBD frame.
+4. **Hysteresis** — `GEAR_HYSTERESIS_K` consecutive median values must agree; between gears, the new ratio must be closer by `GEAR_HYSTERESIS_DEV_MARGIN` than the current stable gear.
+5. **Unknown hold** — if the stable gear is not yet valid, the last good digit is kept for `GEAR_UNKNOWN_HOLD_SEC` (e.g. 0.2 s).
+
+(Historyczna funkcja `predict_gear()` została usunięta — aktualnie używana jest tylko `GearPipeline`, bo daje stabilniejszy wynik.)
 
 ## Requirements (Python packages)
 

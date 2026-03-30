@@ -2,7 +2,7 @@ import subprocess
 import sys
 import time
 import threading
-from collections import Counter, deque
+from collections import deque
 from pathlib import Path
 
 import psutil
@@ -19,7 +19,7 @@ from display import (
     update_gear_lights,
     update_rpm_lights,
 )
-from gear_predictor import predict_gear
+from gear_predictor import GearPipeline
 from obd_reader import state, state_lock
 from startup_check import run_startup_animation, show_error_lights
 
@@ -39,8 +39,7 @@ metrics_lock = threading.Lock()
 # ------------------------------------------------------------------
 # LED THREAD
 # ------------------------------------------------------------------
-gear_history = deque(maxlen=5)
-gear_display = 0
+gear_display = -1
 running = True
 frame_times = deque(maxlen=60)
 
@@ -48,6 +47,7 @@ frame_times = deque(maxlen=60)
 def led_loop() -> None:
     global gear_display
 
+    gear_pipeline = GearPipeline()
     smoothed_rpm = 0.0
     has_smoothed_rpm = False
     last_raw_rpm = 0.0
@@ -62,25 +62,24 @@ def led_loop() -> None:
             speed = state["speed"]
 
         if not has_smoothed_rpm:
-            smoothed_rpm = raw_rpm
-            has_smoothed_rpm = True
+            # Unikamy startowego transientu, gdy OBD chwilowo zwraca raw_rpm=0.
+            if raw_rpm > 0.0 or speed > 0.0:
+                smoothed_rpm = raw_rpm
+                has_smoothed_rpm = True
         else:
             smoothed_rpm = (config.RPM_EMA_ALPHA * raw_rpm) + (
                 (1.0 - config.RPM_EMA_ALPHA) * smoothed_rpm
             )
 
-        predicted_gear = predict_gear(raw_rpm, speed)
-        if (
-            last_displayed_gear > 0
-            and predicted_gear > last_displayed_gear
-            and has_last_raw_rpm
-            and (raw_rpm - last_raw_rpm) > config.RPM_RISE_DOWNSHIFT_GUARD
-        ):
-            predicted_gear = last_displayed_gear
-
-        gear_history.append(predicted_gear)
-        if len(gear_history) == gear_history.maxlen:
-            gear_display = Counter(gear_history).most_common(1)[0][0]
+        gear_display = gear_pipeline.step(
+            raw_rpm,
+            speed,
+            last_displayed_gear,
+            has_last_raw_rpm,
+            last_raw_rpm,
+        )
+        if gear_display >= 0:
+            last_displayed_gear = gear_display
 
         last_raw_rpm = raw_rpm
         has_last_raw_rpm = True
@@ -90,7 +89,6 @@ def led_loop() -> None:
 
         if gear_display >= 0:
             update_gear_lights(gear_display)
-            last_displayed_gear = gear_display
 
         apply_over_rev_alert(raw_rpm)
 
@@ -104,7 +102,7 @@ def led_loop() -> None:
             metrics["led_frames"] += 1
             metrics["led_frame_time_ms"] = frame_ms
             metrics["led_frame_time_avg"] = sum(frame_times) / len(frame_times)
-            metrics["gear_history"] = list(gear_history)
+            metrics["gear_history"] = gear_pipeline.history_snapshot()
             metrics["last_gear_display"] = gear_display
 
         time.sleep(max(0.0, config.TARGET_FRAME_TIME_SEC - elapsed))
