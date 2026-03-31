@@ -24,10 +24,6 @@ RPM_EMA_ALPHA = 0.70
 # traktujemy to jako fałszywy "upshift" (w prawdziwym upshifcie RPM zwykle spada).
 RPM_RISE_DOWNSHIFT_GUARD = 120.0
 
-# Guard na fałszywy downshift podczas hamowania: jeśli kandydat na bieg spada (np. 4→3),
-# ale surowe RPM nie rośnie co najmniej o ten próg, to blokujemy zmianę.
-RPM_DOWN_SHIFT_CONFIRM_RISE = 200.0
-
 OVER_REV_ALERT_MARGIN_RPM = 300.0
 OVER_REV_BLINK_PERIOD_SEC = 0.16
 
@@ -64,8 +60,8 @@ GEARS_RATIOS = {
 # ------------------------------------------------------------------
 GEARS_INDEX = {
     -1: [],
-    0: [3, 7, 8, 13, 17, 18, 19, 20, 21, 22, 23, 24, 39],
-    1: [24, 28, 34, 39, 40, 41, 42, 43, 44, 45, 46, 55, 56],
+    0: [8,9,10,11,12,13,14,18,19,27,37,38,40,41,42,43,44,45,46],
+    1: [3,7,8,13,17,18,19,20,21,22,23,24,39],
     2: [2, 6, 7, 8, 10, 14, 17, 20, 23, 24, 28, 30, 34, 39],
     3: [2, 6, 8, 14, 17, 20, 23, 24, 27, 30, 34, 35, 37, 38],
     4: [3, 4, 11, 13, 17, 20, 24, 25, 26, 27, 28, 29, 30, 36],
